@@ -89,7 +89,53 @@ The 0-100 score starts at 100 and deducts points for:
 - Duplicate code blocks: -1.5 each (capped at -20)
 - Low code-to-comment ratio: -1 each
 
-Exit code is 1 if score drops below 50 — useful for CI gates.
+Exit code is 1 if score drops below 50 (configurable with `--threshold`). Useful for CI gates.
+
+## CI / GitHub Actions
+
+Use `--threshold` to set a quality gate in CI:
+
+```bash
+# Fail if score < 70
+npx ai-code-quality-analyzer --json --threshold 70 .
+```
+
+### Quick setup
+
+Drop this workflow into `.github/workflows/code-quality.yml`:
+
+```yaml
+name: Code Quality
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npx ai-code-quality-analyzer --json --threshold 70 .
+```
+
+The pipeline fails when the score drops below your threshold. Adjust `--threshold` to whatever bar makes sense for your team.
+
+### With artifact upload
+
+Want to keep the full report? Upload it as an artifact:
+
+```yaml
+      - run: npx ai-code-quality-analyzer --json . > quality-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-report
+          path: quality-report.json
+```
 
 ## Supported languages
 

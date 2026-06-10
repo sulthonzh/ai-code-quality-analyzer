@@ -1,0 +1,32 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  quality-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install -g ai-code-quality-analyzer
+      - run: codeq --json . > code-quality-report.json
+      - name: Upload quality report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-report
+          path: code-quality-report.json
+      - name: Check quality gate
+        run: |
+          SCORE=$(node -e "const r=require('./code-quality-report.json'); console.log(r.summary.score)")
+          echo "Quality score: $SCORE"
+          if [ "$SCORE" -lt 60 ]; then
+            echo "::error::Quality score $SCORE is below threshold (60)"
+            exit 1
+          fi
