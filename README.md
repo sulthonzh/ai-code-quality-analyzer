@@ -91,6 +91,41 @@ The 0-100 score starts at 100 and deducts points for:
 
 Exit code is 1 if score drops below 50 (configurable with `--threshold`). Useful for CI gates.
 
+## Branch comparison (`--compare`)
+
+See how your code quality changed between git refs:
+
+```bash
+# Compare current branch against main
+codeq --compare main
+
+# Compare against a tag
+codeq --compare v1.0.0
+
+# JSON output for automation
+codeq --compare main --json
+```
+
+Example output:
+
+```
+codeq — branch comparison
+─────────────────────────────
+  base: main
+  head: HEAD
+
+  Score:   72 → 80  (+8 ↑)
+  Files:   10 → 12  (+2)
+  Lines:   500 → 600  (+100)
+
+Resolved issues:
+  ✅ 1 file(s) exceed 500 lines. Consider splitting.
+
+✅ Quality improved!
+```
+
+In compare mode, `--threshold` controls how much degradation is acceptable. Exit code is 1 if the score drops by more than the threshold value.
+
 ## CI / GitHub Actions
 
 Use `--threshold` to set a quality gate in CI:

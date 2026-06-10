@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { analyze } from './analyzer.js';
 import { formatHuman, formatJson } from './reporter.js';
+import { compare, formatCompareHuman, formatCompareJson } from './compare.js';
 import { resolve } from 'path';
 
 const args = process.argv.slice(2);
@@ -19,6 +20,16 @@ if (thresholdIdx !== -1 && args[thresholdIdx + 1]) {
 }
 if (isNaN(threshold)) threshold = 50;
 
+// Parse --compare <ref> or --compare=<ref>
+const compareIdx = args.indexOf('--compare');
+const compareEq = args.find(a => a.startsWith('--compare='));
+let compareRef = null;
+if (compareIdx !== -1 && args[compareIdx + 1]) {
+  compareRef = args[compareIdx + 1];
+} else if (compareEq) {
+  compareRef = compareEq.split('=')[1];
+}
+
 async function main() {
   if (args.includes('--help') || args.includes('-h')) {
     console.log(`codeq — AI-friendly code quality analyzer
@@ -28,6 +39,7 @@ Usage:
   codeq --json              Output structured JSON
   codeq --quiet             Only show summary
   codeq --threshold <n>     Fail if score is below <n> (default: 50)
+  codeq --compare <ref>     Compare current state against a git ref (branch/tag/commit)
   codeq --help              Show this help
 
 Metrics:
@@ -40,10 +52,36 @@ Metrics:
 CI Usage:
   codeq --json --threshold 70 .
   Exit code 0 if score >= threshold, 1 otherwise.
+
+Compare branches:
+  codeq --compare main
+  codeq --compare v1.0.0 --json
+  Shows score delta, new/resolved issues between refs.
 `);
     return;
   }
 
+  // Branch comparison mode
+  if (compareRef) {
+    const results = await compare(dir, compareRef);
+
+    if (jsonOutput) {
+      console.log(formatCompareJson(results));
+    } else {
+      console.log(formatCompareHuman(results));
+    }
+
+    // Exit 1 if score degraded by more than threshold
+    if (results.delta.score < -threshold) {
+      if (!quiet) {
+        console.error(`\n❌ Quality dropped by ${Math.abs(results.delta.score)} points (threshold: ${threshold})`);
+      }
+      process.exit(1);
+    }
+    return;
+  }
+
+  // Normal analysis mode
   const results = await analyze(dir);
   
   if (jsonOutput) {
