@@ -18,7 +18,7 @@ jobs:
       - run: codeq --json . > code-quality-report.json
       - name: Upload quality report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: quality-report
           path: code-quality-report.json
